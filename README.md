@@ -194,3 +194,196 @@ def highly_divisible_triangular(min_divisors):
 
 ---
 
+
+
+
+## Проблема №18
+
+- **Название**: Maximum Path Sum I
+
+- **Описание**: Начав с вершины треугольника ниже и перемещаясь к смежным числам в строке ниже, максимальная общая сумма от верха к низу составляет $23$.
+
+  ```
+       3
+      7 4
+     2 4 6
+    8 5 9 3
+  ```
+
+  То есть, $3 + 7 + 4 + 9 = 23$.
+
+- **Задание**: Найдите максимальную общую сумму от верха к низу данного треугольника:
+
+  ```
+              75
+             95 64
+            17 47 82
+           18 35 87 10
+          ...
+  ```
+
+### Идея решения
+
+Задача решается методом динамического программирования снизу вверх. Начинаем с предпоследней строки и для каждого элемента выбираем максимальный путь из двух возможных путей снизу.
+
+Алгоритм:
+1. Начинаем с предпоследней строки треугольника
+2. Для каждого элемента $i$ в текущей строке добавляем максимум из двух элементов строки ниже: $\max(lower[i], lower[i+1])$
+3. Продолжаем до вершины треугольника
+4. Результат - значение в вершине
+
+### Монолитная реализация с использованием хвостовой рекурсии
+
+```clj
+(defn maximum-path-sum [triangle]
+  (loop [row (dec (count triangle))
+         current-triangle triangle]
+    (if (zero? row)
+      (first (first current-triangle))
+      (let [current-row (nth current-triangle row)
+            prev-row (nth current-triangle (dec row))
+            new-prev-row (vec (map-indexed 
+                               (fn [i val]
+                                 (+ val (max (nth current-row i) 
+                                           (nth current-row (inc i)))))
+                               prev-row))
+            new-triangle (assoc current-triangle (dec row) new-prev-row)]
+        (recur (dec row) new-triangle)))))
+```
+
+[Файл с решением](/src/itmo_fp_lab1/task18/tail_rec.clj)
+
+### Простое рекурсивное решение
+
+```clj
+(defn maximum-path-sum [triangle]
+  (letfn [(merge-rows [upper lower]
+            (vec (map-indexed
+                  (fn [i val]
+                    (+ val (max (nth lower i) (nth lower (inc i)))))
+                  upper)))
+          (solve [tri]
+            (if (= 1 (count tri))
+              (first (first tri))
+              (solve (conj (vec (butlast (butlast tri)))
+                          (merge-rows (nth tri (- (count tri) 2))
+                                     (last tri))))))]
+    (solve triangle)))
+```
+
+[Файл с решением](/src/itmo_fp_lab1/task18/simple_rec.clj)
+
+### Модульная реализация
+
+Использование `reduce` для последовательного объединения строк снизу вверх:
+
+```clj
+(defn maximum-path-sum [triangle]
+  (letfn [(merge-rows [upper lower]
+            (vec (map-indexed
+                  (fn [i val]
+                    (+ val (max (nth lower i) (nth lower (inc i)))))
+                  upper)))]
+    (->> triangle
+         (reverse)
+         (reduce (fn [lower upper]
+                   (merge-rows upper lower)))
+         (first))))
+```
+
+[Файл с решением](/src/itmo_fp_lab1/task18/module.clj)
+
+### Генерация последовательности через `map`
+
+```clj
+(defn maximum-path-sum [triangle]
+  (letfn [(process-row [upper lower]
+            (->> upper
+                 (map-indexed (fn [i val]
+                                (+ val (max (nth lower i) 
+                                          (nth lower (inc i))))))
+                 (vec)))]
+    (->> (reverse triangle)
+         (reduce (fn [accumulated-row current-row]
+                   (process-row current-row accumulated-row)))
+         (first))))
+```
+
+[Файл с решением](/src/itmo_fp_lab1/task18/map.clj)
+
+### Работа со спец синтаксисом циклов
+
+Использование `doseq` и атомов для императивного стиля:
+
+```clj
+(defn maximum-path-sum [triangle]
+  (let [result (atom (last triangle))]
+    (doseq [row-idx (range (- (count triangle) 2) -1 -1)]
+      (let [current-row (nth triangle row-idx)
+            new-row (atom [])]
+        (doseq [i (range (count current-row))]
+          (swap! new-row conj 
+                 (+ (nth current-row i)
+                    (max (nth @result i) (nth @result (inc i))))))
+        (reset! result @new-row)))
+    (first @result)))
+```
+
+[Файл с решением](/src/itmo_fp_lab1/task18/cycles.clj)
+
+### Работа с бесконечными списками
+
+Применение `reductions` для получения всех промежуточных результатов:
+
+```clj
+(defn maximum-path-sum [triangle]
+  (letfn [(merge-rows [upper lower]
+            (vec (map-indexed
+                  (fn [i val]
+                    (+ val (max (nth lower i) (nth lower (inc i)))))
+                  upper)))]
+    (->> (iterate identity triangle)
+         (take 1)
+         (first)
+         (reverse)
+         (reductions (fn [lower upper]
+                       (merge-rows upper lower)))
+         (last)
+         (first))))
+```
+
+[Файл с решением](/src/itmo_fp_lab1/task18/inf_seq.clj)
+
+### Решение на Python
+
+```python
+def maximum_path_sum(triangle):
+    triangle = [row[:] for row in triangle]
+    
+    for row in range(len(triangle) - 2, -1, -1):
+        for col in range(len(triangle[row])):
+            triangle[row][col] += max(triangle[row + 1][col], 
+                                     triangle[row + 1][col + 1])
+    
+    return triangle[0][0]
+```
+
+[Файл с решением](/py/task18.py)
+
+---
+
+## Выводы
+
+В ходе выполнения лабораторной работы были изучены различные подходы к решению задач в функциональной парадигме:
+
+1. **Рекурсия vs хвостовая рекурсия**: Хвостовая рекурсия с `loop`/`recur` позволяет избежать переполнения стека для больших входных данных, но требует более сложной структуры кода.
+
+2. **Функции высшего порядка**: Использование `map`, `filter`, `reduce` делает код более декларативным и понятным. Решения становятся короче и яснее выражают намерение программиста.
+
+3. **Бесконечные последовательности**: В Clojure ленивые вычисления позволяют работать с бесконечными структурами данных (`iterate`, `reductions`), что дает элегантные решения для задач поиска.
+
+4. **Императивный стиль в функциональном языке**: Использование атомов и циклов `doseq`/`while` возможно, но делает код менее идиоматичным и труднее для понимания. Такие решения теряют преимущества функционального подхода.
+
+5. **Сравнение с Python**: Императивные решения на Python часто короче и понятнее для простых задач. Однако функциональные решения на Clojure более выразительны для сложной композиции операций над коллекциями.
+
+**Наиболее элегантными** оказались решения с использованием модульной композиции функций и работы с бесконечными последовательностями. Они демонстрируют мощь функциональной парадигмы и читаются как описание алгоритма на высоком уровне абстракции.
