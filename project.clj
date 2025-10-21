@@ -6,7 +6,6 @@
   :dependencies [[org.clojure/clojure "1.12.2"]]
   :target-path "target/%s"
   :plugins [[dev.weavejester/lein-cljfmt "0.13.1"],
-            [jonase/eastwood "1.4.3"],
             [com.github.clj-kondo/lein-clj-kondo "0.2.5"]]
   :profiles {:uberjar {:aot :all
                        :jvm-opts ["-Dclojure.compiler.direct-linking=true"]}})

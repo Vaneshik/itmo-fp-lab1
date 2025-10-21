@@ -45,7 +45,4 @@ jobs:
     
     - name: Run tests
       run: lein test
-    
-    - name: Run eastwood
-      run: lein eastwood
 
